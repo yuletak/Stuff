@@ -1,2 +1,4 @@
-Stuff
-=====
+Algorithms
+==========
+
+Search/Sort algorithms
