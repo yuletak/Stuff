@@ -1,4 +1,4 @@
-Algorithms
+Random code
 ==========
 
 Search/Sort algorithms
