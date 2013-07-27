@@ -30,28 +30,28 @@ import time
 reEther = re.compile('Ethernet adapter Local Area Connection')
 reTun = re.compile('Tunnel adapter')
 reDns = re.compile('DNS Servers')
-DNS1 = '172.17.3.131'
-DNS2 = '172.17.3.132'
+DNS1 = '192.168.3.65'
+DNS2 = '192.168.3.66'
 reComment = re.compile('^#.*$')
 # empty line
 reWhitespace = re.compile('^\s*$')
 reDns1 = re.compile(DNS1)
 reDns2 = re.compile(DNS2)
-reLocalhost = re.compile('127\.0\.0\.1[ \t]+localhost')
-reMail = re.compile('192\.168\.7\.159[ \t]+' +\
+reLocalhost = re.compile('[ \t]*127\.0\.0\.1[ \t]+localhost')
+reMail = re.compile('[ \t]*192\.168\.7\.159[ \t]+' +\
     'mail.boardvantage.com[ \t]+mail.boardvantage.net')
 reIface = re.compile('"Local Area Connection[ ]?\d*"')
 
 # Default values
-DEFUSER = 'administrator'
-DEFPWD = 'boardvantage'
-DEFDOMAIN = 'boardvantage'
+DEFUSER = 'Administrator'
+DEFPWD = 'star4.Light5'
+DEFDOMAIN = 'WORKGROUP'
 user = ''
 host = ''
 pwd = ''
 
 def gen_server_list(group, idHost=1, ipNet='192.168.0', ipHost=1, noServers=0, \
-            attr='all', user='Administrator', pwd='xyz123', domain='WORKGROUP'):
+    attr='all', user='Administrator', pwd='star4.Light5', domain='WORKGROUP'):
     """ Generate list of servers 
         
         Generate list of servers and return to caller
@@ -80,9 +80,8 @@ def gen_server_list(group, idHost=1, ipNet='192.168.0', ipHost=1, noServers=0, \
         i += 1
     return list 
 
-servers = gen_server_list('tw', 1, '192.168.11', 221, 10, 'even')
-#for i in range(len(servers)):
-#    print 'servers[{0}]:  {1}\n'.format(i, servers[i])
+servers = gen_server_list('tw', 26, '192.168.11', 246, 1, 'even', \
+        DEFUSER, DEFPWD, DEFDOMAIN)
 
 def exec_winexe(domain, user, pwd, ip, cmd):
     """ Execute the winexe command and get output/error
@@ -102,6 +101,7 @@ def exec_winexe(domain, user, pwd, ip, cmd):
     cred = '-U \'{0}\{1}%{2}\' //{3} '.format(domain, user, pwd, ip)
     paramWinexe = '--interactive=0 --uninstall ' + cred 
     params = WINEXE + paramWinexe + cmd
+#    print 'params:  {0}'.format(params)
     p = subprocess.Popen(params, shell=True, stdout=subprocess.PIPE)
     oput, err = p.communicate()
     return oput, err
@@ -134,19 +134,21 @@ for server in servers:
     login = '"{0}\{1}%{2}"'.format(domain, user, pwd)
     ip = '{0}'.format(server['ip'])
     iface = ''
-
+    print DELIMIT
+    print 'Starting check for {0}'.format(host)
     # Windows command
+    print 'Getting host file'
     cmdHosts = '\'cmd /C more c:\Windows\System32\drivers\etc\hosts\''
     oputHosts, errHosts = exec_winexe(domain, user, pwd, ip, cmdHosts)
 
+    print 'Getting network interface name'
     cmdIface = '\'netsh interface ipv4 show config\''
     oputIface, errIface = exec_winexe(domain, user, pwd, ip, cmdIface)
     match = reIface.search(oputIface)
     iface = match.group(0)
-#    print 'iface:  {0}\n'.format(iface)
 
+    print 'Getting DNS setting'
     cmdNetsh = '\'netsh interface ipv4 show config ' + iface + '\''
-
     oputNetsh, errNetsh = exec_winexe(domain, user, pwd, ip, cmdNetsh)
     
     # Host log file setup
@@ -167,6 +169,7 @@ for server in servers:
 
     hostLog = open(hostLogName, 'r+')
     hostsCheck = 0
+    print 'Verifying host file'
     if errHosts == None:
         result = ''
         for line in hostLog:
@@ -193,12 +196,14 @@ for server in servers:
                 break
         if hostsCheck == 2:
             sumLog.write('***** PASS:  hosts file *****\n')
-            
+            print '*** hosts file PASS ***'            
         else:
             sumLog.write('***** FAIL:  Error in hosts file *****\n')
+            print '*** hosts file FAIL ***'            
     else:
         sumLog.write('ERROR in winexe hosts: {0}\n'.format(errHosts))
             
+    print 'Verifying DNS'
     dnsCheck = 0
     if errNetsh == None:
         hostLog.write(oputNetsh)
@@ -214,8 +219,10 @@ for server in servers:
            sumLog.write('Error: Did not find DNS server {0}\n'.format(DNS2))
         if dnsCheck == 2:
             sumLog.write('***** PASS:  DNS setting *****\n')
+            print '*** DNS setting pass ***'            
         else:
             sumLog.write('***** FAIL:  DNS setting *****\n')
+            print '*** DNS setting FAIL ***'            
     else:
         sumLog.write('ERROR winexe netsh:  {0}\n'.format(errNetsh))
 
